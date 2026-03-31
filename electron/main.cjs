@@ -52,7 +52,9 @@ function createSoftphoneWindow() {
 
   loadRoute(softphoneWin, "/softphone");
   softphoneWin.on("blur", () => {
-    setTimeout(() => { if (softphoneWin && !softphoneWin.isDestroyed() && !softphoneWin.isFocused()) softphoneWin.hide(); }, 150);
+    setTimeout(() => {
+      if (softphoneWin && !softphoneWin.isDestroyed() && !softphoneWin.isFocused() && !isInCall) softphoneWin.hide();
+    }, 150);
   });
   softphoneWin.on("closed", () => { softphoneWin = null; });
 }
