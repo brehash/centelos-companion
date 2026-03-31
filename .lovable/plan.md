@@ -1,29 +1,31 @@
 
 
-# Fix Taskbar Icon & Softphone Routing Reliability
+# Fix: Native Notification "Answer" Should Auto-Accept the Call
 
-## Issue 1: Taskbar shows default Electron icon
+## Problem
+When clicking "Answer" on the incoming call native notification, the softphone window opens but the call isn't automatically accepted — the user has to click "Answer" again in the softphone UI.
 
-**Root cause**: The `tray-icon.png` is a 16x16 tray icon — too small for the taskbar. Windows uses a separate mechanism (`AppUserModelID` + the `icon` from BrowserWindow) for the taskbar icon, and needs a larger icon (256x256 ideally). Also, `app.setAppUserModelId()` is not being called.
+**Root cause**: Electron's `Notification` action buttons (`notif.on("action")`) only work on **macOS**. On Windows, the `action` event never fires. The `click` event fires when the notification body is clicked, but it only shows/focuses the softphone — it doesn't send an accept command.
 
-**Fix**:
-1. Copy the `centelos-icon.png` from the Centelos project assets into `electron/icons/app-icon.png` — this is a proper logo image suitable for taskbar use.
-2. In `electron/main.cjs`:
-   - Add `app.setAppUserModelId("com.centelos.app")` near the top (before `app.whenReady()`)
-   - Use `app-icon.png` as the `icon` for all `BrowserWindow` instances (softphone, chat, settings) — keep `tray-icon.png` only for the tray
+## Solution
+In `electron/main.cjs`, when a call notification is clicked, also send `call:accept` to the softphone window so it auto-answers:
 
-## Issue 2: Softphone sometimes loads chat
+### `electron/main.cjs` changes
+1. In the `notif.on("click")` handler for call notifications, add `sendToWindow(softphoneWin, "call:accept")` after showing/focusing the softphone
+2. In the `notif.on("action")` handler (for macOS), when action is "answer", also send `sendToWindow(softphoneWin, "call:accept")` as a backup — don't rely solely on `notification:action` IPC
 
-**Root cause**: The `loadRoute` already uses `/#/softphone`, but there's a race condition. When `toggleSoftphone()` calls `createSoftphoneWindow()` then immediately `softphoneWin.show()`, the window may not have finished loading the URL yet. The `ready-to-show` event isn't being used for the softphone window (unlike chat/settings which use it). The window shows before the hash route is parsed, so React briefly renders the default route (chat).
+### `src/hooks/useVoicePhone.ts` changes
+3. In the `onCallAcceptRequest` handler (the IPC listener for `call:accept`), add the same logic that the `onNotificationAction("answer")` handler uses: call `incomingCallRef.current.accept()` and `setupCallListeners()`
+4. Currently the `onCallAcceptRequest` listener (lines ~505-510) likely calls `acceptCall()` — verify it properly accepts the Twilio call object
 
-**Fix** in `electron/main.cjs`:
-- Add `ready-to-show` handling to `createSoftphoneWindow()` — don't show the window until content is loaded
-- In `toggleSoftphone()`, if creating a new window, wait for `ready-to-show` before showing
+This way:
+- **Windows**: Clicking the notification → `click` event → shows softphone + sends `call:accept` → softphone auto-answers
+- **macOS**: Clicking "Answer" button → `action` event → same flow
 
 ## Files to modify
 
 | File | Change |
 |------|--------|
-| `electron/icons/app-icon.png` | Copy from Centelos project assets |
-| `electron/main.cjs` | Add `setAppUserModelId`, use `app-icon.png` for windows, add `ready-to-show` to softphone |
+| `electron/main.cjs` | Add `sendToWindow(softphoneWin, "call:accept")` to notification `click` handler for call type |
+| `src/hooks/useVoicePhone.ts` | Ensure `onCallAcceptRequest` handler properly accepts the incoming Twilio call |
 
