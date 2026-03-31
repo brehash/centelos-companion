@@ -213,12 +213,17 @@ ipcMain.on("notification:show", (_event, { title, body, type }) => {
       sendToAllWindows("notification:action", action);
       if (action === "answer") {
         if (softphoneWin && !softphoneWin.isDestroyed()) { softphoneWin.show(); softphoneWin.focus(); }
+        sendToWindow(softphoneWin, "call:accept");
+      } else {
+        sendToWindow(softphoneWin, "call:reject");
       }
     });
 
     notif.on("click", () => {
       if (softphoneWin && !softphoneWin.isDestroyed()) { softphoneWin.show(); softphoneWin.focus(); }
       else { toggleSoftphone(); }
+      // Auto-accept the call when notification is clicked
+      sendToWindow(softphoneWin, "call:accept");
     });
 
     notif.show();
