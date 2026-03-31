@@ -17,7 +17,7 @@ export default function Login() {
 
   // Redirect if already logged in
   if (!authLoading && user) {
-    navigate("/softphone", { replace: true });
+    navigate("/chat", { replace: true });
     return null;
   }
 
