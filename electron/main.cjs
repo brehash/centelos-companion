@@ -2,6 +2,8 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, Notificati
 const path = require("path");
 const fs = require("fs");
 
+app.setAppUserModelId("com.centelos.app");
+
 let tray = null;
 let softphoneWin = null;
 let chatWin = null;
