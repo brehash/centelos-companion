@@ -28,6 +28,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openChat: () => ipcRenderer.send("open:chat"),
   openSoftphone: () => ipcRenderer.send("open:softphone"),
 
+  // Notification actions (Answer/Reject from native notifications)
+  onNotificationAction: (callback) => {
+    ipcRenderer.on("notification:action", (_event, action) => callback(action));
+    return () => ipcRenderer.removeAllListeners("notification:action");
+  },
+
   // Platform
   platform: process.platform,
   isElectron: true,
