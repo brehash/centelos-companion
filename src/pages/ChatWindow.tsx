@@ -252,7 +252,7 @@ export default function ChatWindow() {
                   const isEdited = !!msg.edited_at;
                   const replyOriginal = msg.reply_to_id ? replyMap.get(msg.reply_to_id) : null;
                   const senderName = isGroup && !isMine ? senderNames[msg.sender_id] || "Unknown" : null;
-                  const isImage = msg.file_url && msg.file_name && isImageFile(new File([], msg.file_name));
+                  const isImage = msg.file_url && msg.file_name && isImageFileName(msg.file_name);
 
                   return (
                     <div key={msg.id} className={cn("flex group/msg", isMine ? "justify-end" : "justify-start")}>
