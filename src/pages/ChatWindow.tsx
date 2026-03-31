@@ -820,6 +820,12 @@ export default function ChatWindow() {
 
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-auto px-3 pt-2 pb-1" onScroll={handleScroll}>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mb-2" />
+                  <p className="text-xs text-muted-foreground">Loading messages…</p>
+                </div>
+              ) : (
               <div className="flex flex-col justify-end min-h-full space-y-2">
                 {loadingMore && <p className="text-xs text-muted-foreground text-center py-2 animate-pulse">Loading older messages…</p>}
                 {!loadingMore && hasMore && !loading && visibleMessages.length > 0 && <p className="text-xs text-muted-foreground/50 text-center py-1">Scroll up for older messages</p>}
