@@ -69,7 +69,11 @@ function createSoftphoneWindow() {
 }
 
 function toggleSoftphone() {
-  if (!softphoneWin || softphoneWin.isDestroyed()) { createSoftphoneWindow(); softphoneWin.show(); return; }
+  if (!softphoneWin || softphoneWin.isDestroyed()) {
+    createSoftphoneWindow();
+    softphoneWin._shouldShowOnReady = true;
+    return;
+  }
   if (softphoneWin.isVisible()) softphoneWin.hide();
   else { softphoneWin.show(); softphoneWin.focus(); }
 }
