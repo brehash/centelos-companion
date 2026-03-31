@@ -118,11 +118,6 @@ export default function Settings() {
         </Card>
 
         {/* Notifications */}
-        <Card>
-          <CardContent className="pt-5">
-            <NotificationExample />
-          </CardContent>
-        </Card>
 
         {/* Sign out */}
         <Button
