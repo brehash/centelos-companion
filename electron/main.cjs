@@ -38,21 +38,28 @@ function sendToAllWindows(channel, ...args) {
   });
 }
 
+const appIconPath = path.join(__dirname, "icons", "app-icon.png");
+
 function createSoftphoneWindow() {
   const display = screen.getPrimaryDisplay();
   const { width: screenW } = display.workAreaSize;
 
-  const iconPath = path.join(__dirname, "icons", "tray-icon.png");
   softphoneWin = new BrowserWindow({
     width: SOFTPHONE_WIDTH, height: SOFTPHONE_HEIGHT,
     x: screenW - SOFTPHONE_WIDTH - 16, y: 16,
     frame: false, resizable: false, skipTaskbar: false, alwaysOnTop: true,
     show: false, transparent: false,
-    icon: iconPath,
+    icon: appIconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
   });
 
   loadRoute(softphoneWin, "/softphone");
+  softphoneWin.once("ready-to-show", () => {
+    if (softphoneWin._shouldShowOnReady) {
+      softphoneWin.show();
+      softphoneWin.focus();
+    }
+  });
   softphoneWin.on("blur", () => {
     setTimeout(() => {
       if (softphoneWin && !softphoneWin.isDestroyed() && !softphoneWin.isFocused() && !isInCall) softphoneWin.hide();
