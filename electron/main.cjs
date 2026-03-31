@@ -44,7 +44,7 @@ function createSoftphoneWindow() {
   softphoneWin = new BrowserWindow({
     width: SOFTPHONE_WIDTH, height: SOFTPHONE_HEIGHT,
     x: screenW - SOFTPHONE_WIDTH - 16, y: 16,
-    frame: false, resizable: false, skipTaskbar: true, alwaysOnTop: true,
+    frame: false, resizable: false, skipTaskbar: false, alwaysOnTop: true,
     show: false, transparent: false,
     icon: iconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
