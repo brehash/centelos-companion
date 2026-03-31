@@ -1,78 +1,84 @@
 
 
-# Connect Desktop App to Live Centelos Backend
+# Gap Analysis: Desktop Chat vs Centelos Web Chat
 
-## Problem
-The desktop app currently has dummy/demo data for chat and softphone. It needs to use the same Supabase backend as Centelos so that logging in makes the user "online", chat messages are real, and incoming calls trigger native Windows notifications with Answer/Reject buttons.
+## What IS working (confirmed via network requests)
+- Authentication against real Supabase backend
+- Workspace fetching (AirFiber WISP loaded correctly)
+- Presence updates (online status broadcasting)
+- Extensions list (all 19 extensions loaded)
+- Profile resolution (all member names loaded)
+- Unread count polling (DM + group)
+- Real-time Supabase channels subscribed
 
-## Approach
-Port the essential contexts, hooks, and components from the Centelos project into this desktop app, adapting them for the Electron environment. The key systems to bring over:
+## What the user likely means by "dummy data"
+The desktop `ChatWindow.tsx` is **374 lines** while Centelos `Chat.tsx` is **1894 lines**. The desktop version is a stripped-down port missing many features from the original. The visual experience is significantly less polished, which may make it feel "not connected" even though data flows correctly.
 
-1. **WorkspaceContext** — fetches user's workspaces from Supabase
-2. **PresenceContext** — manages online/offline status and syncs across devices
-3. **VoicePhoneContext + useVoicePhone** — Twilio Voice SDK integration for real calls
-4. **useBackgroundRingers** — monitors calls on non-active workspaces
-5. **useChatMessages** — real-time chat with Supabase
-6. **useChatNotifications** — triggers notifications on new messages
-7. **useTypingIndicator** — typing presence
-8. **ChatSidebar + Chat page** — real chat UI from Centelos
-9. **Native Electron notifications** — for calls and messages with action buttons
+## Key missing features (Centelos web has, desktop doesn't)
+
+1. **URL rendering** -- Centelos renders clickable links in messages; desktop shows plain text
+2. **Date separators** -- "Today", "Yesterday", "Monday" dividers between message groups
+3. **Emoji picker** -- Centelos uses `@emoji-mart/react`; desktop has no emoji UI
+4. **Read receipts** -- double-check marks for read messages
+5. **Message search** -- sidebar search across messages
+6. **Emoticon replacement** -- `:)` to emoji conversion via `replaceEmoticons`
+7. **Image processing** -- Centelos uses `processImageFile` for compression/resize before upload
+8. **File hash dedup** -- prevents duplicate file uploads
+9. **Forward dialog** -- user picker for forwarding messages
+10. **Group management** -- add/remove members, leave group, rename
+11. **Contact info sheet** -- sliding panel with user details
+12. **Mobile responsive layout** -- back button, collapsible sidebar
+13. **Inline support chat** -- `InlineSupportChat` component
+14. **Copy message** -- copy text to clipboard action
 
 ## Plan
 
-### Step 1: Add Workspace & Presence contexts
-- Copy `WorkspaceContext.tsx` from Centelos (adapted — remove Centelos-specific fields like twilio_trust_product, logo_upload, fraud_suspension etc. or keep them for compatibility)
-- Copy `PresenceContext.tsx` from Centelos — this handles online status, "in-call" status broadcast, and realtime presence channel
-- Wire both into `App.tsx` provider tree (WorkspaceProvider wraps PresenceProvider wraps routes)
+### Step 1: Port the full message rendering from Centelos
+- Add `renderMessageContent()` with URL detection and clickable links
+- Add `getDateLabel()` for date separators between messages
+- Add `replaceEmoticons()` integration for emoticon-to-emoji conversion
+- Add read receipt indicators (CheckCheck icon for read, Check for sent)
 
-### Step 2: Add VoicePhone system for real softphone
-- Copy `useVoicePhone.ts` from Centelos — this is the full Twilio Voice SDK hook (Device registration, incoming/outgoing calls, hold, transfer, DTMF, mute)
-- Copy `VoicePhoneContext.tsx` and `useBackgroundRingers.ts`
-- Install `@twilio/voice-sdk` dependency
-- Rewrite `Softphone.tsx` to use `useVoicePhoneContext()` instead of local simulated state — mirroring Centelos's `SoftphoneWidget.tsx` logic but in the standalone window layout
+### Step 2: Add emoji picker
+- Import `@emoji-mart/data` and `@emoji-mart/react` (already in dependencies)
+- Add emoji button next to send, with popover picker
+- Insert selected emoji into message input
 
-### Step 3: Add real chat system
-- Copy hooks: `useChatMessages.ts`, `useChatNotifications.ts`, `useTypingIndicator.ts`
-- Copy components: `CreateGroupDialog.tsx`, `ChatLightbox.tsx`
-- Copy utility files: `image-utils.ts`, `file-hash.ts`, `emoticons.ts` from Centelos `src/lib/`
-- Rewrite `ChatWindow.tsx` to use real Supabase data — port the full `Chat.tsx` from Centelos (1894 lines), adapted to work in the standalone frameless window layout (no dashboard navigation, uses `FramelessTitleBar`)
-- Rewrite the chat sidebar to use real presence members, groups, unread counts — port from Centelos's `ChatSidebar.tsx`
+### Step 3: Port full file upload with image processing
+- Use `processImageFile()` for image compression before upload
+- Use `computeFileHash()` for dedup
+- Show upload progress indicator
+- Better file preview in messages (thumbnails, download buttons)
 
-### Step 4: Native Electron notifications with action buttons
-- Update `electron/main.cjs`: handle `notification:show` IPC with native `Notification` API
-  - For incoming calls: show notification with "Answer" and "Reject" action buttons (Windows toast actions)
-  - For chat messages: show notification that clicks to open chat window
-- Update `electron/preload.cjs`: add `onIncomingCall` and `onNotificationAction` IPC channels
-- In the renderer, modify `useChatNotifications` to call `electronAPI.showNotification()` instead of browser `Notification` API when running in Electron
-- For incoming calls, the `VoicePhoneContext` will trigger native notification via `electronAPI.showNotification({ title, body, type: 'call' })` and listen for answer/reject responses via IPC
+### Step 4: Add forward dialog
+- Port the forward user picker from Centelos
+- Show member list to pick forward target
 
-### Step 5: Update App.tsx provider hierarchy and routing
-- Add `WorkspaceProvider` and `PresenceProvider` wrapping protected routes
-- Add `VoicePhoneProvider` inside the workspace/presence providers
-- Add chat sub-routes: `/chat/:userId`, `/chat/group/:groupId`
-- On login, call `registerDesktopDevice()` and set presence to online
-- On logout/quit, set presence to offline
+### Step 5: Add group management features
+- Add/remove members from groups
+- Leave group action
+- Rename group (for creator/admin)
+- Show member list in group info panel
 
-### Step 6: Tray badge integration
-- Use `useUnreadCount` / `useGlobalUnreadCount` from Centelos to get real unread counts
-- Call `electronAPI.setTrayBadge(count)` whenever unread count changes
-- This makes the tray icon show actual unread message counts
+### Step 6: Add message search
+- Search input in sidebar header
+- Filter messages by search term
+- Highlight matching text in results
 
-## Dependencies to install
-- `@twilio/voice-sdk` — for real voice calls
-- `@emoji-mart/data` and `@emoji-mart/react` — for emoji picker in chat (matching Centelos)
+### Step 7: Enhance message actions
+- Copy message to clipboard
+- Better context menu / hover actions
+- Confirmation dialog for delete
 
-## Files to create/modify (summary)
-- **Create**: ~10 new files (contexts, hooks, utilities ported from Centelos)
-- **Rewrite**: `Softphone.tsx`, `ChatWindow.tsx` (replace dummy data with real Supabase integration)
-- **Modify**: `App.tsx` (provider tree + routes), `electron/main.cjs` (native notifications), `electron/preload.cjs` (new IPC channels)
+### Step 8: Port the contact info sheet
+- Sliding panel showing user details when clicking avatar/name
+- Extension number, online status, call button
 
-## What will work after this
-- Login makes user appear "online" in Centelos web app and desktop app simultaneously
-- Real chat messages sync in real-time between web and desktop
-- Incoming calls show native Windows toast notifications with Answer/Reject buttons
-- Chat notifications show native Windows toasts
-- Tray icon shows real unread count
-- Typing indicators work across web and desktop
-- The desktop app is a fully functional second endpoint
+## Files to modify
+- `src/pages/ChatWindow.tsx` -- major rewrite to port full Centelos Chat.tsx features
+- `src/components/ChatSidebar.tsx` -- add search, improve group management UI
+- `src/components/CreateGroupDialog.tsx` -- ensure group creation with member selection works
+
+## Dependencies needed
+- `@emoji-mart/data` and `@emoji-mart/react` (may need to be installed)
 
