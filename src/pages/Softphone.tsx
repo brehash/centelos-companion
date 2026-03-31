@@ -182,7 +182,7 @@ export default function Softphone() {
 
   return (
     <div className="flex flex-col h-screen bg-card overflow-hidden relative">
-      <FramelessTitleBar title="Centelos Softphone" />
+      <FramelessTitleBar title="Centelos Softphone" showMinimize={true} />
 
       {/* Full-window preloader */}
       {!isReady && (

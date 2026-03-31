@@ -161,6 +161,10 @@ ipcMain.on("call:reject", () => {
 
 // Softphone broadcasts call state → relay to all OTHER windows
 ipcMain.on("call:state-changed", (event, state) => {
+  // Track in-call state to prevent auto-hide
+  const activeStatuses = ["in-call", "ringing-in", "ringing-out"];
+  isInCall = activeStatuses.includes(state?.callStatus);
+
   BrowserWindow.getAllWindows().forEach((w) => {
     if (!w.isDestroyed() && w.webContents !== event.sender) {
       w.webContents.send("call:state-changed", state);
