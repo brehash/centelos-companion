@@ -539,7 +539,7 @@ function useVoicePhonePrimary(): UseVoicePhoneReturn {
       phoneStatus,
     };
     api.broadcastCallState(state);
-  }, [callStatus, incomingFrom, isMuted, isOnHold, callDuration, extensionNumber, dialedTarget, callDirection]);
+  }, [callStatus, incomingFrom, isMuted, isOnHold, callDuration, extensionNumber, dialedTarget, callDirection, phoneStatus]);
 
   // Internal make call (used by both direct calls and IPC-delegated)
   const makeCallInternal = useCallback(async (number: string) => {
