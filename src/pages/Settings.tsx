@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useElectron } from "@/contexts/ElectronContext";
 import FramelessTitleBar from "@/components/FramelessTitleBar";
-import NotificationExample from "@/components/NotificationExample";
+
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -118,11 +118,6 @@ export default function Settings() {
         </Card>
 
         {/* Notifications */}
-        <Card>
-          <CardContent className="pt-5">
-            <NotificationExample />
-          </CardContent>
-        </Card>
 
         {/* Sign out */}
         <Button
