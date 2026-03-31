@@ -37,7 +37,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
+      <FramelessTitleBar title="Centelos Desktop" />
+      <div className="flex-1 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
