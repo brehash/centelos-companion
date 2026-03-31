@@ -174,7 +174,7 @@ export default function Softphone() {
         )}
 
         {/* Idle dial pad */}
-        {isIdle && callStatus !== "ringing-in" && (
+        {callStatus === "idle" && (
           <div className="p-4 space-y-3">
             <div className="flex gap-1">
               <Input
