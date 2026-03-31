@@ -1,32 +1,29 @@
 
 
-# Softphone: Show in Taskbar & Don't Auto-Hide During Calls
+# Fix Taskbar Icon & Softphone Routing Reliability
 
-## Problem
-The softphone has `skipTaskbar: true` and auto-hides on blur. During a call, switching to another app causes the softphone to disappear — the user can't get back to it easily.
+## Issue 1: Taskbar shows default Electron icon
 
-## Changes
+**Root cause**: The `tray-icon.png` is a 16x16 tray icon — too small for the taskbar. Windows uses a separate mechanism (`AppUserModelID` + the `icon` from BrowserWindow) for the taskbar icon, and needs a larger icon (256x256 ideally). Also, `app.setAppUserModelId()` is not being called.
 
-### 1. Show softphone in taskbar (`electron/main.cjs`)
-- Change `skipTaskbar: true` to `skipTaskbar: false` in `createSoftphoneWindow()`
-- Set the icon to `tray-icon.png` (already done) so the Centelos logo shows in the taskbar
+**Fix**:
+1. Copy the `centelos-icon.png` from the Centelos project assets into `electron/icons/app-icon.png` — this is a proper logo image suitable for taskbar use.
+2. In `electron/main.cjs`:
+   - Add `app.setAppUserModelId("com.centelos.app")` near the top (before `app.whenReady()`)
+   - Use `app-icon.png` as the `icon` for all `BrowserWindow` instances (softphone, chat, settings) — keep `tray-icon.png` only for the tray
 
-### 2. Don't auto-hide during a call (`electron/main.cjs`)
-- Track an `isInCall` flag in main process
-- Add IPC listener `call:in-progress` that sets the flag
-- In the `blur` handler, only auto-hide if `!isInCall`
-- The softphone renderer broadcasts this via existing `call:state-changed` — listen for `callStatus` being `"in-call"` or `"ringing-in"` or `"ringing-out"`
+## Issue 2: Softphone sometimes loads chat
 
-### 3. Add title bar with minimize to Softphone (`src/pages/Softphone.tsx`)
-- The softphone already has `<FramelessTitleBar>` — add `showMinimize={true}` so the user can minimize to taskbar instead of only closing
+**Root cause**: The `loadRoute` already uses `/#/softphone`, but there's a race condition. When `toggleSoftphone()` calls `createSoftphoneWindow()` then immediately `softphoneWin.show()`, the window may not have finished loading the URL yet. The `ready-to-show` event isn't being used for the softphone window (unlike chat/settings which use it). The window shows before the hash route is parsed, so React briefly renders the default route (chat).
 
-### 4. Broadcast in-call state from softphone to main process
-- In `electron/main.cjs`, update the existing `call:state-changed` handler to also set `isInCall` based on the state's `callStatus`
+**Fix** in `electron/main.cjs`:
+- Add `ready-to-show` handling to `createSoftphoneWindow()` — don't show the window until content is loaded
+- In `toggleSoftphone()`, if creating a new window, wait for `ready-to-show` before showing
 
 ## Files to modify
 
 | File | Change |
 |------|--------|
-| `electron/main.cjs` | `skipTaskbar: false`, conditional auto-hide based on call state |
-| `src/pages/Softphone.tsx` | Add `showMinimize={true}` to FramelessTitleBar |
+| `electron/icons/app-icon.png` | Copy from Centelos project assets |
+| `electron/main.cjs` | Add `setAppUserModelId`, use `app-icon.png` for windows, add `ready-to-show` to softphone |
 
