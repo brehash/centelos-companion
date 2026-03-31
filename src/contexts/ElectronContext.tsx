@@ -12,6 +12,7 @@ interface ElectronAPI {
   setSettings: (settings: { startInTray: boolean; theme: string }) => void;
   openChat: () => void;
   openSoftphone: () => void;
+  onNotificationAction: (callback: (action: string) => void) => () => void;
   platform: string;
   isElectron: boolean;
 }
