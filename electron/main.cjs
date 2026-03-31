@@ -7,6 +7,7 @@ let softphoneWin = null;
 let chatWin = null;
 let settingsWin = null;
 let unreadCount = 0;
+let isInCall = false;
 
 const isDev = !app.isPackaged;
 const SOFTPHONE_WIDTH = 300;
