@@ -734,7 +734,7 @@ export default function ChatWindow() {
 
   const hasConversation = !!userId || !!groupId;
 
-  const chatReady = !!user && !!currentWorkspace && !loading;
+  const chatReady = !!user && !!currentWorkspace;
 
   // ─── Render ───
   return (

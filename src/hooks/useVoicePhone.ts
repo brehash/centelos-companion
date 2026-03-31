@@ -119,7 +119,7 @@ function useVoicePhoneDelegate(): UseVoicePhoneReturn {
   const cancelAttendedTransfer = useCallback(async () => {}, []);
 
   return {
-    phoneStatus: extensionNumber ? "registered" : "offline",
+    phoneStatus,
     callStatus,
     isMuted,
     isOnHold,

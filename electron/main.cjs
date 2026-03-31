@@ -16,7 +16,7 @@ const CHAT_HEIGHT = 650;
 
 function loadRoute(win, route) {
   if (isDev) {
-    win.loadURL(`http://localhost:8080${route}`);
+    win.loadURL(`http://localhost:8080/#${route}`);
   } else {
     win.loadFile(path.join(__dirname, "..", "dist", "index.html"), { hash: route });
   }
