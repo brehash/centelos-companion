@@ -7,6 +7,7 @@ let softphoneWin = null;
 let chatWin = null;
 let settingsWin = null;
 let unreadCount = 0;
+let isInCall = false;
 
 const isDev = !app.isPackaged;
 const SOFTPHONE_WIDTH = 300;
@@ -43,7 +44,7 @@ function createSoftphoneWindow() {
   softphoneWin = new BrowserWindow({
     width: SOFTPHONE_WIDTH, height: SOFTPHONE_HEIGHT,
     x: screenW - SOFTPHONE_WIDTH - 16, y: 16,
-    frame: false, resizable: false, skipTaskbar: true, alwaysOnTop: true,
+    frame: false, resizable: false, skipTaskbar: false, alwaysOnTop: true,
     show: false, transparent: false,
     icon: iconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
@@ -51,7 +52,9 @@ function createSoftphoneWindow() {
 
   loadRoute(softphoneWin, "/softphone");
   softphoneWin.on("blur", () => {
-    setTimeout(() => { if (softphoneWin && !softphoneWin.isDestroyed() && !softphoneWin.isFocused()) softphoneWin.hide(); }, 150);
+    setTimeout(() => {
+      if (softphoneWin && !softphoneWin.isDestroyed() && !softphoneWin.isFocused() && !isInCall) softphoneWin.hide();
+    }, 150);
   });
   softphoneWin.on("closed", () => { softphoneWin = null; });
 }
@@ -158,6 +161,10 @@ ipcMain.on("call:reject", () => {
 
 // Softphone broadcasts call state → relay to all OTHER windows
 ipcMain.on("call:state-changed", (event, state) => {
+  // Track in-call state to prevent auto-hide
+  const activeStatuses = ["in-call", "ringing-in", "ringing-out"];
+  isInCall = activeStatuses.includes(state?.callStatus);
+
   BrowserWindow.getAllWindows().forEach((w) => {
     if (!w.isDestroyed() && w.webContents !== event.sender) {
       w.webContents.send("call:state-changed", state);
