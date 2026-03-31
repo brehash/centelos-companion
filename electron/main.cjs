@@ -22,6 +22,19 @@ function loadRoute(win, route) {
   }
 }
 
+// ─── Helper: send IPC to a specific window if it exists ───
+function sendToWindow(win, channel, ...args) {
+  if (win && !win.isDestroyed()) {
+    win.webContents.send(channel, ...args);
+  }
+}
+
+function sendToAllWindows(channel, ...args) {
+  BrowserWindow.getAllWindows().forEach((w) => {
+    if (!w.isDestroyed()) w.webContents.send(channel, ...args);
+  });
+}
+
 function createSoftphoneWindow() {
   const display = screen.getPrimaryDisplay();
   const { width: screenW } = display.workAreaSize;
@@ -107,11 +120,60 @@ ipcMain.on("tray:set-badge", (_event, count) => {
   if (tray) tray.setContextMenu(buildTrayMenu());
 });
 
+// ─── Cross-Window Call IPC Relay ───
+
+// Chat window requests a call → relay to softphone window
+ipcMain.on("call:make", (_event, number) => {
+  // Show softphone first
+  if (softphoneWin && !softphoneWin.isDestroyed()) {
+    softphoneWin.show();
+    softphoneWin.focus();
+  } else {
+    createSoftphoneWindow();
+    softphoneWin.show();
+  }
+  sendToWindow(softphoneWin, "call:make", number);
+});
+
+// Chat window requests hangup → relay to softphone
+ipcMain.on("call:hangup", () => {
+  sendToWindow(softphoneWin, "call:hangup");
+});
+
+// Chat window requests accept → relay to softphone
+ipcMain.on("call:accept", () => {
+  sendToWindow(softphoneWin, "call:accept");
+});
+
+// Chat window requests reject → relay to softphone
+ipcMain.on("call:reject", () => {
+  sendToWindow(softphoneWin, "call:reject");
+});
+
+// Softphone broadcasts call state → relay to all OTHER windows
+ipcMain.on("call:state-changed", (event, state) => {
+  BrowserWindow.getAllWindows().forEach((w) => {
+    if (!w.isDestroyed() && w.webContents !== event.sender) {
+      w.webContents.send("call:state-changed", state);
+    }
+  });
+});
+
+// Focus softphone window (e.g. when call starts from chat)
+ipcMain.on("window:focus-softphone", () => {
+  if (softphoneWin && !softphoneWin.isDestroyed()) {
+    softphoneWin.show();
+    softphoneWin.focus();
+  } else {
+    createSoftphoneWindow();
+    softphoneWin.show();
+  }
+});
+
 // ─── Native Notifications with Actions ───
 
 ipcMain.on("notification:show", (_event, { title, body, type }) => {
   if (type === "call") {
-    // Show notification with Answer/Reject actions (Windows toast)
     const notif = new Notification({
       title,
       body,
@@ -120,17 +182,12 @@ ipcMain.on("notification:show", (_event, { title, body, type }) => {
         { type: "button", text: "Reject" },
       ],
       urgency: "critical",
-      toastXml: process.platform === "win32" ? undefined : undefined,
     });
 
     notif.on("action", (_event, actionIndex) => {
       const action = actionIndex === 0 ? "answer" : "reject";
-      // Send action to all windows (softphone will handle it)
-      BrowserWindow.getAllWindows().forEach((w) => {
-        if (!w.isDestroyed()) w.webContents.send("notification:action", action);
-      });
+      sendToAllWindows("notification:action", action);
       if (action === "answer") {
-        // Show softphone window
         if (softphoneWin && !softphoneWin.isDestroyed()) { softphoneWin.show(); softphoneWin.focus(); }
       }
     });
@@ -142,7 +199,7 @@ ipcMain.on("notification:show", (_event, { title, body, type }) => {
 
     notif.show();
   } else {
-    // Chat notification — simple click to open chat
+    // Chat notification
     const notif = new Notification({ title, body });
     notif.on("click", () => createChatWindow());
     notif.show();
@@ -150,7 +207,7 @@ ipcMain.on("notification:show", (_event, { title, body, type }) => {
 });
 
 ipcMain.on("theme:set", (_event, theme) => {
-  BrowserWindow.getAllWindows().forEach((w) => { if (!w.isDestroyed()) w.webContents.send("theme:changed", theme); });
+  sendToAllWindows("theme:changed", theme);
 });
 
 ipcMain.handle("settings:get", () => {

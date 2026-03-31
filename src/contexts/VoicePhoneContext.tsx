@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useCallback, useState } from "react";
-import { useVoicePhone, UseVoicePhoneReturn } from "@/hooks/useVoicePhone";
+import { useVoicePhonePrimary, useVoicePhoneDelegate, isElectronDelegateWindow, UseVoicePhoneReturn } from "@/hooks/useVoicePhone";
 import { useBackgroundRingers, BackgroundIncoming } from "@/hooks/useBackgroundRingers";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -12,8 +12,20 @@ interface VoicePhoneContextType extends UseVoicePhoneReturn {
 
 const VoicePhoneContext = createContext<VoicePhoneContextType | undefined>(undefined);
 
-export const VoicePhoneProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const phone = useVoicePhone();
+// Delegate provider: chat window in Electron — no Twilio Device, mirrors state via IPC
+const VoicePhoneDelegateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const phone = useVoicePhoneDelegate();
+
+  return (
+    <VoicePhoneContext.Provider value={{ ...phone, backgroundIncoming: null, acceptBackgroundCall: () => {}, rejectBackgroundCall: () => {} }}>
+      {children}
+    </VoicePhoneContext.Provider>
+  );
+};
+
+// Primary provider: softphone window or non-Electron — owns Twilio Device
+const VoicePhonePrimaryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const phone = useVoicePhonePrimary();
   const { user } = useAuth();
   const { workspaces, currentWorkspace, setCurrentWorkspace } = useWorkspace();
   const [backgroundIncoming, setBackgroundIncoming] = useState<BackgroundIncoming | null>(null);
@@ -56,6 +68,14 @@ export const VoicePhoneProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       {children}
     </VoicePhoneContext.Provider>
   );
+};
+
+// Router: picks the right provider based on window role
+export const VoicePhoneProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (isElectronDelegateWindow()) {
+    return <VoicePhoneDelegateProvider>{children}</VoicePhoneDelegateProvider>;
+  }
+  return <VoicePhonePrimaryProvider>{children}</VoicePhonePrimaryProvider>;
 };
 
 export const useVoicePhoneContext = () => {

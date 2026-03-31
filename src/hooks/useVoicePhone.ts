@@ -3,6 +3,7 @@ import { Device, Call } from "@twilio/voice-sdk";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import type { CrossWindowCallState } from "@/contexts/ElectronContext";
 
 export type PhoneStatus = "offline" | "connecting" | "registered" | "error";
 export type CallStatus = "idle" | "ringing-in" | "ringing-out" | "in-call";
@@ -50,7 +51,109 @@ export interface UseVoicePhoneReturn extends VoicePhoneState, VoicePhoneActions 
   callDirection: "inbound" | "outbound" | null;
 }
 
-export function useVoicePhone(): UseVoicePhoneReturn {
+// ─── Detect if this window is the VoIP owner (softphone) or a delegate (chat) ───
+function isSoftphoneWindow(): boolean {
+  return window.location.hash.includes("/softphone") || window.location.pathname.includes("/softphone");
+}
+
+function isElectronDelegateWindow(): boolean {
+  return !!window.electronAPI?.isElectron && !isSoftphoneWindow();
+}
+
+// ─── Delegate hook: used by chat window in Electron ───
+function useVoicePhoneDelegate(): UseVoicePhoneReturn {
+  const [callStatus, setCallStatus] = useState<CallStatus>("idle");
+  const [isMuted, setIsMuted] = useState(false);
+  const [isOnHold, setIsOnHold] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [incomingFrom, setIncomingFrom] = useState<string | null>(null);
+  const [extensionNumber, setExtensionNumber] = useState<string | null>(null);
+  const [dialedTarget, setDialedTarget] = useState<string | null>(null);
+  const [callDirection, setCallDirection] = useState<"inbound" | "outbound" | null>(null);
+
+  // Listen for call state broadcasts from softphone via IPC
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.onCallStateChanged) return;
+    const cleanup = api.onCallStateChanged((state: CrossWindowCallState) => {
+      setCallStatus(state.callStatus);
+      setIsMuted(state.isMuted);
+      setIsOnHold(state.isOnHold);
+      setCallDuration(state.callDuration);
+      setIncomingFrom(state.incomingFrom);
+      setExtensionNumber(state.extensionNumber);
+      setDialedTarget(state.dialedTarget);
+      setCallDirection(state.callDirection);
+    });
+    return cleanup;
+  }, []);
+
+  const makeCall = useCallback((number: string) => {
+    window.electronAPI?.requestCall(number);
+  }, []);
+
+  const hangUp = useCallback(() => {
+    window.electronAPI?.requestHangup();
+  }, []);
+
+  const acceptCall = useCallback(() => {
+    window.electronAPI?.requestAcceptCall();
+  }, []);
+
+  const rejectCall = useCallback(() => {
+    window.electronAPI?.requestRejectCall();
+  }, []);
+
+  // These actions are not supported from delegate — no-ops
+  const toggleMute = useCallback(() => {}, []);
+  const sendDtmf = useCallback((_digit: string) => {}, []);
+  const setInputDevice = useCallback(async (_deviceId: string) => {}, []);
+  const setOutputDevice = useCallback(async (_deviceId: string) => {}, []);
+  const holdCall = useCallback(async () => {}, []);
+  const unholdCall = useCallback(async () => {}, []);
+  const blindTransfer = useCallback(async (_targetExt: string) => {}, []);
+  const startAttendedTransfer = useCallback((_targetExt: string) => {}, []);
+  const completeAttendedTransfer = useCallback(async () => {}, []);
+  const cancelAttendedTransfer = useCallback(async () => {}, []);
+
+  return {
+    phoneStatus: extensionNumber ? "registered" : "offline",
+    callStatus,
+    isMuted,
+    isOnHold,
+    callDuration,
+    incomingFrom,
+    incomingIsInternal: false,
+    incomingCallerUserId: null,
+    errorMessage: null,
+    extensionNumber,
+    hasExtension: !!extensionNumber,
+    activeCallSid: null,
+    transferMode: null,
+    transferPhase: "idle",
+    consultCallSid: null,
+    consultTarget: null,
+    dialedTarget,
+    callDirection,
+    makeCall,
+    acceptCall,
+    rejectCall,
+    hangUp,
+    toggleMute,
+    sendDtmf,
+    setInputDevice,
+    setOutputDevice,
+    holdCall,
+    unholdCall,
+    blindTransfer,
+    startAttendedTransfer,
+    completeAttendedTransfer,
+    cancelAttendedTransfer,
+  };
+}
+
+// ─── Primary hook: owns the Twilio Device (softphone window or non-Electron) ───
+function useVoicePhonePrimary(): UseVoicePhoneReturn {
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
 
@@ -376,7 +479,69 @@ export function useVoicePhone(): UseVoicePhoneReturn {
     return cleanup;
   }, [setupCallListeners, cleanupCall]);
 
-  const makeCall = useCallback(async (number: string) => {
+  // ─── Listen for delegated call actions from chat window via IPC ───
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.isElectron || !isSoftphoneWindow()) return;
+
+    const cleanups: (() => void)[] = [];
+
+    if (api.onCallMakeRequest) {
+      cleanups.push(api.onCallMakeRequest((number: string) => {
+        if (deviceRef.current && callStatusRef.current === "idle") {
+          makeCallInternal(number);
+        }
+      }));
+    }
+
+    if (api.onCallHangupRequest) {
+      cleanups.push(api.onCallHangupRequest(() => {
+        hangUpInternal();
+      }));
+    }
+
+    if (api.onCallAcceptRequest) {
+      cleanups.push(api.onCallAcceptRequest(() => {
+        if (incomingCallRef.current) {
+          setCallDirection("inbound");
+          incomingCallRef.current.accept();
+          setupCallListeners(incomingCallRef.current, "inbound");
+        }
+      }));
+    }
+
+    if (api.onCallRejectRequest) {
+      cleanups.push(api.onCallRejectRequest(() => {
+        if (incomingCallRef.current) {
+          incomingCallRef.current.reject();
+          cleanupCall();
+        }
+      }));
+    }
+
+    return () => cleanups.forEach((c) => c());
+  }, [setupCallListeners, cleanupCall]);
+
+  // ─── Broadcast call state to other windows via IPC ───
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.isElectron || !isSoftphoneWindow() || !api.broadcastCallState) return;
+
+    const state: CrossWindowCallState = {
+      callStatus,
+      incomingFrom,
+      isMuted,
+      isOnHold,
+      callDuration,
+      extensionNumber,
+      dialedTarget,
+      callDirection,
+    };
+    api.broadcastCallState(state);
+  }, [callStatus, incomingFrom, isMuted, isOnHold, callDuration, extensionNumber, dialedTarget, callDirection]);
+
+  // Internal make call (used by both direct calls and IPC-delegated)
+  const makeCallInternal = useCallback(async (number: string) => {
     if (!deviceRef.current || callStatus !== "idle") return;
     setDialedTarget(number);
     setCallDirection("outbound");
@@ -386,6 +551,10 @@ export function useVoicePhone(): UseVoicePhoneReturn {
       setupCallListeners(call, "outbound");
     } catch (err) { console.error("makeCall error:", err); setDialedTarget(null); setCallDirection(null); }
   }, [callStatus, setupCallListeners]);
+
+  const makeCall = useCallback(async (number: string) => {
+    makeCallInternal(number);
+  }, [makeCallInternal]);
 
   const acceptCall = useCallback(() => {
     if (!incomingCallRef.current) return;
@@ -408,12 +577,16 @@ export function useVoicePhone(): UseVoicePhoneReturn {
     return data;
   }, [currentWorkspace?.id]);
 
-  const hangUp = useCallback(() => {
+  const hangUpInternal = useCallback(() => {
     if (activeCallSid && currentWorkspace?.id) invokeCallAction({ action: "hangup_remote", callSid: activeCallSid }).catch(() => {});
     if (activeCallRef.current) activeCallRef.current.disconnect();
     if (incomingCallRef.current) incomingCallRef.current.reject();
     cleanupCall();
   }, [activeCallSid, currentWorkspace?.id, cleanupCall, invokeCallAction]);
+
+  const hangUp = useCallback(() => {
+    hangUpInternal();
+  }, [hangUpInternal]);
 
   const toggleMute = useCallback(() => {
     if (!activeCallRef.current) return;
@@ -557,4 +730,12 @@ export function useVoicePhone(): UseVoicePhoneReturn {
     setInputDevice, setOutputDevice, holdCall, unholdCall, blindTransfer, startAttendedTransfer,
     completeAttendedTransfer, cancelAttendedTransfer, consultTarget, dialedTarget, callDirection,
   };
+}
+
+// Export both hooks — VoicePhoneContext picks the right one based on window role
+export { useVoicePhonePrimary, useVoicePhoneDelegate, isElectronDelegateWindow };
+
+// Default export for non-Electron or single-window usage
+export function useVoicePhone(): UseVoicePhoneReturn {
+  return useVoicePhonePrimary();
 }

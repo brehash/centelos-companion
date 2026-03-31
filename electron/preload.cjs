@@ -34,6 +34,42 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeAllListeners("notification:action");
   },
 
+  // ─── Cross-Window Call IPC ───
+
+  // Chat window → main → softphone: request actions
+  requestCall: (number) => ipcRenderer.send("call:make", number),
+  requestHangup: () => ipcRenderer.send("call:hangup"),
+  requestAcceptCall: () => ipcRenderer.send("call:accept"),
+  requestRejectCall: () => ipcRenderer.send("call:reject"),
+  focusSoftphone: () => ipcRenderer.send("window:focus-softphone"),
+
+  // Softphone → main → other windows: broadcast state
+  broadcastCallState: (state) => ipcRenderer.send("call:state-changed", state),
+
+  // Any window: listen for call state updates from softphone
+  onCallStateChanged: (callback) => {
+    ipcRenderer.on("call:state-changed", (_event, state) => callback(state));
+    return () => ipcRenderer.removeAllListeners("call:state-changed");
+  },
+
+  // Softphone: listen for delegated call actions from other windows
+  onCallMakeRequest: (callback) => {
+    ipcRenderer.on("call:make", (_event, number) => callback(number));
+    return () => ipcRenderer.removeAllListeners("call:make");
+  },
+  onCallHangupRequest: (callback) => {
+    ipcRenderer.on("call:hangup", (_event) => callback());
+    return () => ipcRenderer.removeAllListeners("call:hangup");
+  },
+  onCallAcceptRequest: (callback) => {
+    ipcRenderer.on("call:accept", (_event) => callback());
+    return () => ipcRenderer.removeAllListeners("call:accept");
+  },
+  onCallRejectRequest: (callback) => {
+    ipcRenderer.on("call:reject", (_event) => callback());
+    return () => ipcRenderer.removeAllListeners("call:reject");
+  },
+
   // Platform
   platform: 'windows',
   isElectron: true,
