@@ -2,6 +2,8 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, Notificati
 const path = require("path");
 const fs = require("fs");
 
+app.setAppUserModelId("com.centelos.app");
+
 let tray = null;
 let softphoneWin = null;
 let chatWin = null;
@@ -36,21 +38,28 @@ function sendToAllWindows(channel, ...args) {
   });
 }
 
+const appIconPath = path.join(__dirname, "icons", "app-icon.png");
+
 function createSoftphoneWindow() {
   const display = screen.getPrimaryDisplay();
   const { width: screenW } = display.workAreaSize;
 
-  const iconPath = path.join(__dirname, "icons", "tray-icon.png");
   softphoneWin = new BrowserWindow({
     width: SOFTPHONE_WIDTH, height: SOFTPHONE_HEIGHT,
     x: screenW - SOFTPHONE_WIDTH - 16, y: 16,
     frame: false, resizable: false, skipTaskbar: false, alwaysOnTop: true,
     show: false, transparent: false,
-    icon: iconPath,
+    icon: appIconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
   });
 
   loadRoute(softphoneWin, "/softphone");
+  softphoneWin.once("ready-to-show", () => {
+    if (softphoneWin._shouldShowOnReady) {
+      softphoneWin.show();
+      softphoneWin.focus();
+    }
+  });
   softphoneWin.on("blur", () => {
     setTimeout(() => {
       if (softphoneWin && !softphoneWin.isDestroyed() && !softphoneWin.isFocused() && !isInCall) softphoneWin.hide();
@@ -60,7 +69,11 @@ function createSoftphoneWindow() {
 }
 
 function toggleSoftphone() {
-  if (!softphoneWin || softphoneWin.isDestroyed()) { createSoftphoneWindow(); softphoneWin.show(); return; }
+  if (!softphoneWin || softphoneWin.isDestroyed()) {
+    createSoftphoneWindow();
+    softphoneWin._shouldShowOnReady = true;
+    return;
+  }
   if (softphoneWin.isVisible()) softphoneWin.hide();
   else { softphoneWin.show(); softphoneWin.focus(); }
 }
@@ -69,12 +82,11 @@ function createChatWindow() {
   if (chatWin && !chatWin.isDestroyed()) { chatWin.show(); chatWin.focus(); return; }
   const display = screen.getPrimaryDisplay();
   const { width: screenW, height: screenH } = display.workAreaSize;
-  const iconPath = path.join(__dirname, "icons", "tray-icon.png");
   chatWin = new BrowserWindow({
     width: CHAT_WIDTH, height: CHAT_HEIGHT,
     x: Math.round((screenW - CHAT_WIDTH) / 2), y: Math.round((screenH - CHAT_HEIGHT) / 2),
     frame: false, resizable: true, minWidth: 600, minHeight: 400, show: false,
-    icon: iconPath,
+    icon: appIconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
   });
   loadRoute(chatWin, "/chat");
@@ -84,10 +96,9 @@ function createChatWindow() {
 
 function createSettingsWindow() {
   if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); return; }
-  const iconPath = path.join(__dirname, "icons", "tray-icon.png");
   settingsWin = new BrowserWindow({
     width: 420, height: 500, frame: false, resizable: false, show: false,
-    icon: iconPath,
+    icon: appIconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
   });
   loadRoute(settingsWin, "/settings");
