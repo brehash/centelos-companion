@@ -361,8 +361,9 @@ export function useVoicePhone(): UseVoicePhoneReturn {
 
   // Listen for notification actions from Electron (answer/reject)
   useEffect(() => {
-    if (!window.electronAPI?.onNotificationAction) return;
-    const cleanup = window.electronAPI.onNotificationAction((action: string) => {
+    const api = window.electronAPI as any;
+    if (!api?.onNotificationAction) return;
+    const cleanup = api.onNotificationAction((action: string) => {
       if (action === "answer" && incomingCallRef.current) {
         setCallDirection("inbound");
         incomingCallRef.current.accept();
