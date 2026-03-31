@@ -1,5 +1,16 @@
 import React, { createContext, useContext } from "react";
 
+export interface CrossWindowCallState {
+  callStatus: "idle" | "ringing-in" | "ringing-out" | "in-call";
+  incomingFrom: string | null;
+  isMuted: boolean;
+  isOnHold: boolean;
+  callDuration: number;
+  extensionNumber: string | null;
+  dialedTarget: string | null;
+  callDirection: "inbound" | "outbound" | null;
+}
+
 interface ElectronAPI {
   closeWindow: () => void;
   minimizeWindow: () => void;
@@ -13,6 +24,20 @@ interface ElectronAPI {
   openChat: () => void;
   openSoftphone: () => void;
   onNotificationAction: (callback: (action: string) => void) => () => void;
+
+  // Cross-window call IPC
+  requestCall: (number: string) => void;
+  requestHangup: () => void;
+  requestAcceptCall: () => void;
+  requestRejectCall: () => void;
+  focusSoftphone: () => void;
+  broadcastCallState: (state: CrossWindowCallState) => void;
+  onCallStateChanged: (callback: (state: CrossWindowCallState) => void) => () => void;
+  onCallMakeRequest: (callback: (number: string) => void) => () => void;
+  onCallHangupRequest: (callback: () => void) => () => void;
+  onCallAcceptRequest: (callback: () => void) => () => void;
+  onCallRejectRequest: (callback: () => void) => () => void;
+
   platform: string;
   isElectron: boolean;
 }
