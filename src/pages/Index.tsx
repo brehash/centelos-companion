@@ -17,7 +17,7 @@ const Index = () => {
     );
   }
 
-  if (isElectron && user) return <Navigate to="/softphone" replace />;
+  if (isElectron && user) return <Navigate to="/chat" replace />;
   if (isElectron && !user) return <Navigate to="/login" replace />;
 
   return (

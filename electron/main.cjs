@@ -238,14 +238,8 @@ ipcMain.on("open:softphone", () => toggleSoftphone());
 
 app.whenReady().then(() => {
   createTray();
-  createSoftphoneWindow();
-  try {
-    const settingsPath = path.join(app.getPath("userData"), "settings.json");
-    if (fs.existsSync(settingsPath)) {
-      const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-      if (!settings.startInTray) softphoneWin.show();
-    }
-  } catch {}
+  createSoftphoneWindow(); // hidden, for VoIP registration
+  createChatWindow();      // open chat window on startup
 });
 
 app.on("window-all-closed", (e) => { if (e && e.preventDefault) e.preventDefault(); });
