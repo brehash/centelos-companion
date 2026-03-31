@@ -501,6 +501,7 @@ export default function ChatWindow() {
   const handleCall = useCallback(() => {
     if (!recipientExt) return;
     phone.makeCall(recipientExt);
+    window.electronAPI?.focusSoftphone();
   }, [recipientExt, phone]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
