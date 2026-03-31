@@ -70,6 +70,7 @@ function useVoicePhoneDelegate(): UseVoicePhoneReturn {
   const [extensionNumber, setExtensionNumber] = useState<string | null>(null);
   const [dialedTarget, setDialedTarget] = useState<string | null>(null);
   const [callDirection, setCallDirection] = useState<"inbound" | "outbound" | null>(null);
+  const [phoneStatus, setPhoneStatus] = useState<PhoneStatus>("offline");
 
   // Listen for call state broadcasts from softphone via IPC
   useEffect(() => {
@@ -84,6 +85,7 @@ function useVoicePhoneDelegate(): UseVoicePhoneReturn {
       setExtensionNumber(state.extensionNumber);
       setDialedTarget(state.dialedTarget);
       setCallDirection(state.callDirection);
+      setPhoneStatus(state.phoneStatus ?? "offline");
     });
     return cleanup;
   }, []);
