@@ -864,6 +864,7 @@ export default function ChatWindow() {
                   </div>
                 )}
               </div>
+              )}
             </div>
 
             {/* Forward selection bar */}
