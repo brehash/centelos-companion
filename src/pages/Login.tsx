@@ -30,7 +30,7 @@ export default function Login() {
     if (authError) {
       setError(authError.message || "Sign in failed");
     } else {
-      navigate("/softphone", { replace: true });
+      navigate("/chat", { replace: true });
     }
     setLoading(false);
   };
