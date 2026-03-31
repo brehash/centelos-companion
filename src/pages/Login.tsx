@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Phone, Loader2 } from "lucide-react";
+import FramelessTitleBar from "@/components/FramelessTitleBar";
 
 export default function Login() {
   const { signIn, user, loading: authLoading } = useAuth();
