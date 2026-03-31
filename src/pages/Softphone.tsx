@@ -178,9 +178,20 @@ export default function Softphone() {
     return num;
   }, [phone.dialedTarget, dialNumber, extensions]);
 
+  const isReady = phone.phoneStatus === "registered" || phone.phoneStatus === "error" || !phone.hasExtension;
+
   return (
-    <div className="flex flex-col h-screen bg-card overflow-hidden">
+    <div className="flex flex-col h-screen bg-card overflow-hidden relative">
       <FramelessTitleBar title="Centelos Softphone" />
+
+      {/* Full-window preloader */}
+      {!isReady && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-card/80 backdrop-blur-sm">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-sm font-medium text-foreground">Softphone starting...</p>
+          <p className="text-xs text-muted-foreground mt-1">Registering VoIP device</p>
+        </div>
+      )}
 
       {/* Status bar */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border">
