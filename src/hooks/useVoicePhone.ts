@@ -732,12 +732,10 @@ function useVoicePhonePrimary(): UseVoicePhoneReturn {
   };
 }
 
-// ─── Exported hook: routes to delegate or primary based on window role ───
+// Export both hooks — VoicePhoneContext picks the right one based on window role
+export { useVoicePhonePrimary, useVoicePhoneDelegate, isElectronDelegateWindow };
+
+// Default export for non-Electron or single-window usage
 export function useVoicePhone(): UseVoicePhoneReturn {
-  // We can't conditionally call hooks, so we check at module level
-  // The delegate check is stable per window lifetime (URL doesn't change)
-  if (isElectronDelegateWindow()) {
-    return useVoicePhoneDelegate();
-  }
   return useVoicePhonePrimary();
 }
