@@ -66,10 +66,12 @@ function createChatWindow() {
   if (chatWin && !chatWin.isDestroyed()) { chatWin.show(); chatWin.focus(); return; }
   const display = screen.getPrimaryDisplay();
   const { width: screenW, height: screenH } = display.workAreaSize;
+  const iconPath = path.join(__dirname, "icons", "tray-icon.png");
   chatWin = new BrowserWindow({
     width: CHAT_WIDTH, height: CHAT_HEIGHT,
     x: Math.round((screenW - CHAT_WIDTH) / 2), y: Math.round((screenH - CHAT_HEIGHT) / 2),
     frame: false, resizable: true, minWidth: 600, minHeight: 400, show: false,
+    icon: iconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
   });
   loadRoute(chatWin, "/chat");
