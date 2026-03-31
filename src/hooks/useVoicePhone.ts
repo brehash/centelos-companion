@@ -70,6 +70,7 @@ function useVoicePhoneDelegate(): UseVoicePhoneReturn {
   const [extensionNumber, setExtensionNumber] = useState<string | null>(null);
   const [dialedTarget, setDialedTarget] = useState<string | null>(null);
   const [callDirection, setCallDirection] = useState<"inbound" | "outbound" | null>(null);
+  const [phoneStatus, setPhoneStatus] = useState<PhoneStatus>("offline");
 
   // Listen for call state broadcasts from softphone via IPC
   useEffect(() => {
@@ -84,6 +85,7 @@ function useVoicePhoneDelegate(): UseVoicePhoneReturn {
       setExtensionNumber(state.extensionNumber);
       setDialedTarget(state.dialedTarget);
       setCallDirection(state.callDirection);
+      setPhoneStatus(state.phoneStatus ?? "offline");
     });
     return cleanup;
   }, []);
@@ -117,7 +119,7 @@ function useVoicePhoneDelegate(): UseVoicePhoneReturn {
   const cancelAttendedTransfer = useCallback(async () => {}, []);
 
   return {
-    phoneStatus: extensionNumber ? "registered" : "offline",
+    phoneStatus,
     callStatus,
     isMuted,
     isOnHold,
@@ -536,9 +538,10 @@ function useVoicePhonePrimary(): UseVoicePhoneReturn {
       extensionNumber,
       dialedTarget,
       callDirection,
+      phoneStatus,
     };
     api.broadcastCallState(state);
-  }, [callStatus, incomingFrom, isMuted, isOnHold, callDuration, extensionNumber, dialedTarget, callDirection]);
+  }, [callStatus, incomingFrom, isMuted, isOnHold, callDuration, extensionNumber, dialedTarget, callDirection, phoneStatus]);
 
   // Internal make call (used by both direct calls and IPC-delegated)
   const makeCallInternal = useCallback(async (number: string) => {

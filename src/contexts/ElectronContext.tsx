@@ -9,6 +9,7 @@ export interface CrossWindowCallState {
   extensionNumber: string | null;
   dialedTarget: string | null;
   callDirection: "inbound" | "outbound" | null;
+  phoneStatus: "offline" | "connecting" | "registered" | "error";
 }
 
 interface ElectronAPI {
