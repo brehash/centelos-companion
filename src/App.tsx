@@ -23,6 +23,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const Router = isElectron ? HashRouter : BrowserRouter;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ElectronProvider>
@@ -31,7 +33,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+            <Router>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
@@ -40,7 +42,7 @@ const App = () => (
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
+            </Router>
           </TooltipProvider>
         </AuthProvider>
       </ThemeProvider>
