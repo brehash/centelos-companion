@@ -733,10 +733,21 @@ export default function ChatWindow() {
 
   const hasConversation = !!userId || !!groupId;
 
+  const chatReady = !!user && !!currentWorkspace && !loading;
+
   // ─── Render ───
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col h-screen bg-background overflow-hidden relative">
       <FramelessTitleBar title="Centelos Chat" showMinimize showClose />
+
+      {/* Full-window preloader */}
+      {!chatReady && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-sm font-medium text-foreground">Loading chat...</p>
+          <p className="text-xs text-muted-foreground mt-1">Setting up your workspace</p>
+        </div>
+      )}
 
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
