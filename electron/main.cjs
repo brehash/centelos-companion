@@ -39,11 +39,13 @@ function createSoftphoneWindow() {
   const display = screen.getPrimaryDisplay();
   const { width: screenW } = display.workAreaSize;
 
+  const iconPath = path.join(__dirname, "icons", "tray-icon.png");
   softphoneWin = new BrowserWindow({
     width: SOFTPHONE_WIDTH, height: SOFTPHONE_HEIGHT,
     x: screenW - SOFTPHONE_WIDTH - 16, y: 16,
     frame: false, resizable: false, skipTaskbar: true, alwaysOnTop: true,
     show: false, transparent: false,
+    icon: iconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
   });
 
