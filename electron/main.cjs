@@ -96,10 +96,9 @@ function createChatWindow() {
 
 function createSettingsWindow() {
   if (settingsWin && !settingsWin.isDestroyed()) { settingsWin.show(); settingsWin.focus(); return; }
-  const iconPath = path.join(__dirname, "icons", "tray-icon.png");
   settingsWin = new BrowserWindow({
     width: 420, height: 500, frame: false, resizable: false, show: false,
-    icon: iconPath,
+    icon: appIconPath,
     webPreferences: { preload: path.join(__dirname, "preload.cjs"), contextIsolation: true, nodeIntegration: false },
   });
   loadRoute(settingsWin, "/settings");
