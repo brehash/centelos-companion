@@ -35,6 +35,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   // Platform
-  platform: process.platform,
+  platform: 'windows',
   isElectron: true,
 });
