@@ -536,6 +536,7 @@ function useVoicePhonePrimary(): UseVoicePhoneReturn {
       extensionNumber,
       dialedTarget,
       callDirection,
+      phoneStatus,
     };
     api.broadcastCallState(state);
   }, [callStatus, incomingFrom, isMuted, isOnHold, callDuration, extensionNumber, dialedTarget, callDirection]);
