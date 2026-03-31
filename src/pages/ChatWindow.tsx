@@ -364,7 +364,7 @@ export default function ChatWindow() {
 
       {/* Lightbox */}
       {lightboxImages && (
-        <ChatLightbox images={lightboxImages} initialIndex={lightboxIndex} onClose={() => { setLightboxImages(null); setLightboxIndex(0); }} />
+        <ChatLightbox images={lightboxImages} currentIndex={lightboxIndex} onClose={() => { setLightboxImages(null); setLightboxIndex(0); }} onNavigate={setLightboxIndex} />
       )}
     </div>
   );
