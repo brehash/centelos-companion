@@ -22,6 +22,9 @@ import { format } from "date-fns";
 import { isImageFile } from "@/lib/image-utils";
 import { toast } from "sonner";
 
+const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i;
+function isImageFileName(name: string): boolean { return IMAGE_EXTENSIONS.test(name); }
+
 function getInitials(name: string | null, email: string | null) {
   const s = name || email || "?";
   return s.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
