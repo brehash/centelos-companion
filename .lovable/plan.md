@@ -1,31 +1,66 @@
 
 
-# Fix: Native Notification "Answer" Should Auto-Accept the Call
+# Redesign Softphone with Two-Panel Layout (Reference Screenshot Style)
 
-## Problem
-When clicking "Answer" on the incoming call native notification, the softphone window opens but the call isn't automatically accepted — the user has to click "Answer" again in the softphone UI.
+## Overview
+Redesign the softphone from a single-column 300px layout to a wider two-panel layout inspired by the InContact CTI screenshot: a narrow left navigation sidebar and a right content area showing the dial pad, call controls, etc.
 
-**Root cause**: Electron's `Notification` action buttons (`notif.on("action")`) only work on **macOS**. On Windows, the `action` event never fires. The `click` event fires when the notification body is clicked, but it only shows/focuses the softphone — it doesn't send an accept command.
+## Layout
 
-## Solution
-In `electron/main.cjs`, when a call notification is clicked, also send `call:accept` to the softphone window so it auto-answers:
+```text
+┌──────────────────────────────────────────┐
+│  Centelos Softphone  [title bar]   - x   │
+├────────────┬─────────────────────────────┤
+│ User Info  │                             │
+│ Ext 1001   │   0911328          ⌫       │
+│ ● Online   │   ─────────────────         │
+│────────────│                             │
+│ 📞 Phone   │    1    2    3              │
+│            │   ABC  ABC  ABC             │
+│ 🕐 History │    4    5    6              │
+│            │   ABC  ABC  ABC             │
+│ 👤 Contacts│    7    8    9              │
+│            │   ABC  ABC  ABC             │
+│            │    *    0    #              │
+│            │   ABC  ABC  ABC             │
+│            │                             │
+│            │  [  📞  Call  ────────── ]  │
+│────────────│                             │
+│ 🎧 Audio   │                             │
+└────────────┴─────────────────────────────┘
+```
 
-### `electron/main.cjs` changes
-1. In the `notif.on("click")` handler for call notifications, add `sendToWindow(softphoneWin, "call:accept")` after showing/focusing the softphone
-2. In the `notif.on("action")` handler (for macOS), when action is "answer", also send `sendToWindow(softphoneWin, "call:accept")` as a backup — don't rely solely on `notification:action` IPC
+## Changes
 
-### `src/hooks/useVoicePhone.ts` changes
-3. In the `onCallAcceptRequest` handler (the IPC listener for `call:accept`), add the same logic that the `onNotificationAction("answer")` handler uses: call `incomingCallRef.current.accept()` and `setupCallListeners()`
-4. Currently the `onCallAcceptRequest` listener (lines ~505-510) likely calls `acceptCall()` — verify it properly accepts the Twilio call object
+### 1. Widen softphone window (`electron/main.cjs`)
+- Change `SOFTPHONE_WIDTH` from `300` to `520`
+- Adjust x-position calculation accordingly
 
-This way:
-- **Windows**: Clicking the notification → `click` event → shows softphone + sends `call:accept` → softphone auto-answers
-- **macOS**: Clicking "Answer" button → `action` event → same flow
+### 2. Redesign `Softphone.tsx` to two-panel layout
+- **Left sidebar** (~140px, dark bg matching the screenshot style):
+  - User info section at top: avatar/initials, extension number, registration status dot
+  - Navigation items: Phone (dial pad), Call History (placeholder/future), Contacts (extension list)
+  - Audio Devices toggle at bottom
+- **Right content area** (flex-1):
+  - Shows the active panel content based on sidebar selection
+  - **Phone panel** (default): dial input + dial pad + call button — styled like the screenshot with larger digits, letter labels (ABC, DEF, etc.), and a green call bar at the bottom
+  - **Contacts panel**: scrollable list of extensions from current workspace
+  - **Call History panel**: placeholder "Coming soon" for now
+  - In-call state, incoming call banner, transfer picker all render in the right panel as they do now
+
+### 3. Restyle `DialPad.tsx`
+- Larger buttons with phone-style letter labels beneath each digit (2=ABC, 3=DEF, etc.)
+- Clean white/light background style matching the screenshot
+- Green call button bar at the bottom spanning full width
+
+### 4. Keep all existing functionality intact
+- Keyboard shortcuts, @-mention search, DTMF in-call, transfer picker, audio device selection — all remain, just repositioned into the new layout
 
 ## Files to modify
 
 | File | Change |
 |------|--------|
-| `electron/main.cjs` | Add `sendToWindow(softphoneWin, "call:accept")` to notification `click` handler for call type |
-| `src/hooks/useVoicePhone.ts` | Ensure `onCallAcceptRequest` handler properly accepts the incoming Twilio call |
+| `electron/main.cjs` | `SOFTPHONE_WIDTH = 520`, adjust x position |
+| `src/pages/Softphone.tsx` | Two-panel layout with sidebar nav + content area |
+| `src/components/DialPad.tsx` | Larger buttons with phone letter labels |
 
