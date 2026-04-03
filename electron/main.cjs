@@ -12,8 +12,8 @@ let unreadCount = 0;
 let isInCall = false;
 
 const isDev = !app.isPackaged;
-const SOFTPHONE_WIDTH = 300;
-const SOFTPHONE_HEIGHT = 500;
+const SOFTPHONE_WIDTH = 520;
+const SOFTPHONE_HEIGHT = 550;
 const CHAT_WIDTH = 900;
 const CHAT_HEIGHT = 650;
 
